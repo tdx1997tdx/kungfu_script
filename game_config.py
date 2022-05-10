@@ -8,3 +8,16 @@ drug_config = {
     "drug_hotkey": "f1",
     "yuzhi": 60
 }
+
+kaogu_config = {
+    "type": 90,
+    "drug": "f3",
+    "bianshen": "f12",
+    "danti": "1",
+    "qunti": "3",
+    "qiangyi": "0",
+    "landmark": "f7",
+    "jiezhi": "f10",
+    "caishen": "f6",
+    "sudu": "f9"
+}

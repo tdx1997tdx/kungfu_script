@@ -5,11 +5,10 @@ from log import logger
 
 # 检测角色是否需要吃药
 class MonitorDrugEvent(threading.Thread):
-    def __init__(self, hwnd, yuzhi, kuajiejian):
+    def __init__(self, hwnd, kuajiejian):
         threading.Thread.__init__(self)
         self.hwnd = hwnd
         self.exit_flag = 0
-        self.yuzhi = yuzhi
         self.kuajiejian = kuajiejian
         self.game_tool = KungfuGameTool(self.hwnd)
 
@@ -19,9 +18,8 @@ class MonitorDrugEvent(threading.Thread):
     def run(self):
         logger.info('监控是否要吃药')
         while self.exit_flag == 0:
-            now_point_baifenbi = self.game_tool.get_now_person_blood() / self.game_tool.get_person_max_blood()
-            if now_point_baifenbi * 100 < self.yuzhi:
-                logger.info("当前血量百分比:%s,低于警戒线" % (now_point_baifenbi * 100))
+            if self.game_tool.is_eat_drug():
+                logger.info("吃药")
                 self.game_tool.keyboard_tool.keyboard_press_once(keyboard_map[self.kuajiejian])
             time.sleep(0.5)
 
@@ -33,24 +31,15 @@ class MonitorStopEvent(threading.Thread):
         self.is_stop = False
         self.hwnd = hwnd
         self.exit_flag = 0
-        self.now_point = None
-        self.last_point = None
         self.game_tool = KungfuGameTool(self.hwnd)
 
     def exit_event(self):
         self.exit_flag = 1
 
-    def is_stop_one_time(self):
-        if not self.now_point or not self.last_point:
-            return False
-        return self.now_point[0] == self.last_point[0] and self.now_point[1] == self.last_point[1]
-
     def run(self):
         logger.info('监控"是否停止"启动')
         while self.exit_flag == 0:
-            self.now_point = self.game_tool.get_now_person_point()
-            self.is_stop = self.is_stop_one_time()
-            self.last_point = self.now_point
+            self.is_stop = self.game_tool.is_stop()
             time.sleep(0.5)
 
 

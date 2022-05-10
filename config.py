@@ -56,3 +56,8 @@ keyboard_map = {
     "end": 35,
     "enter": 13
 }
+
+kaogu_type_map = {
+    70: "./img/kaogu_type/jiugong.bmp",
+    90: "./img/kaogu_type/hongshulin.bmp"
+}

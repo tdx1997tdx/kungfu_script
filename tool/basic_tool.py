@@ -102,9 +102,13 @@ class ImageTool:
         dm_ret = self.dm.FindStr(x1, y1, x2, y2, s, "000000-000000", sim)
         return dm_ret
 
-    def get_color(self, x,y):
-        dm_ret = self.dm.GetColor(x,y)
+    def get_color(self, x, y):
+        dm_ret = self.dm.GetColor(x, y)
         return dm_ret
+
+    def is_change_for_certain_place(self, x1, y1, x2, y2):
+        is_ok = self.dm.IsDisplayDead(x1, y1, x2, y2, 1)
+        return is_ok
 
 
 class MemTool:

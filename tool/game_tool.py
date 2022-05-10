@@ -1,12 +1,10 @@
 from tool.basic_tool import *
 from config import *
+from game_config import *
 from tool.hwnd_tool import *
 import ctypes
-import requests
 import time
-import hashlib
-import base64
-import json
+from log import logger
 
 
 class BasicGameTool:
@@ -48,8 +46,6 @@ class BasicGameTool:
 class KungfuGameTool(BasicGameTool):
     def __init__(self, hwnd):
         super().__init__(hwnd)
-        self.process_handle = get_process_handle(self.hwnd)
-        self.kernel32 = ctypes.windll.LoadLibrary("C:\Windows\System32\kernel32.dll")
 
     def camera_up(self, step):
         self.keyboard_tool.keyboard_press_once(keyboard_map["end"])
@@ -110,35 +106,104 @@ class KungfuGameTool(BasicGameTool):
                                                y2=36)
         return False if is_ok == -1 else True
 
+    def is_caishen(self):
+        is_ok, x, y = self.image_tool.find_img('./img/caishen.bmp', x1=890, y1=180, x2=1020, y2=640)
+        return False if is_ok == -1 else True
+
+    def is_sudu(self):
+        is_ok, x, y = self.image_tool.find_img('./img/sudu.bmp', x1=890, y1=180, x2=1020, y2=640)
+        return False if is_ok == -1 else True
+
     def chuansong(self):
         is_ok, x, y = self.image_tool.find_str('传送石', './img/chuansongshi.txt', x1=156, y1=105,
                                                x2=843,
                                                y2=544, sim=0.5)
         return x + 15, y + 25
 
-    def get_now_person_point(self):
-        data = ctypes.c_long()
-        self.kernel32.ReadProcessMemory(int(self.process_handle), 0x0063AE40, ctypes.byref(data), 4, None)
-        data2 = ctypes.c_long()
-        self.kernel32.ReadProcessMemory(int(self.process_handle), data.value + 0x3254, ctypes.byref(data2), 4, None)
-        data3 = ctypes.c_long()
-        self.kernel32.ReadProcessMemory(int(self.process_handle), data2.value + 0x1688, ctypes.byref(data3), 4, None)
-        data4 = ctypes.c_long()
-        self.kernel32.ReadProcessMemory(int(self.process_handle), data3.value + 0x1680, ctypes.byref(data4), 4, None)
-        data5 = ctypes.c_long()
-        self.kernel32.ReadProcessMemory(int(self.process_handle), data3.value + 0x1684, ctypes.byref(data5), 4, None)
-        return data4.value, data5.value
+    def is_stop(self):
+        x1, y1, x2, y2 = 948, 156, 1017, 169
+        is_ok = self.image_tool.is_change_for_certain_place(x1, y1, x2, y2)
+        return False if is_ok == 0 else True
 
-    def get_now_person_blood(self):
-        data = ctypes.c_long()
-        self.kernel32.ReadProcessMemory(int(self.process_handle), 0x0638988, ctypes.byref(data), 4, None)
-        data2 = ctypes.c_long()
-        self.kernel32.ReadProcessMemory(int(self.process_handle), data.value + 0xC0, ctypes.byref(data2), 4, None)
-        return data2.value
+    def is_eat_drug(self):
+        col = self.image_tool.get_color(79, 68)
+        if col[0] != "8" or col[2] != "0" or col[4] != "2":
+            return True
+        return False
 
-    def get_person_max_blood(self):
-        data = ctypes.c_long()
-        self.kernel32.ReadProcessMemory(int(self.process_handle), 0x0638988, ctypes.byref(data), 4, None)
-        data2 = ctypes.c_long()
-        self.kernel32.ReadProcessMemory(int(self.process_handle), data.value + 0xC4, ctypes.byref(data2), 4, None)
-        return data2.value
+    # 找到周莲香
+    def find_npc_zhou(self):
+        def find_zhoulianxiang():
+            # is_ok, x, y = self.image_tool.find_img('./img/zhoulianxiang.bmp', x1=150, y1=90, x2=1000, y2=630, sim=0.5)
+            is_ok, x, y = self.image_tool.find_str('周莲香', './img/zhoulianxiang.txt', x1=150, y1=90, x2=1000, y2=630,
+                                                   sim=0.6)
+            return x + 20, y + 20
+
+        def find_qingbao():
+            is_ok, x, y = self.image_tool.find_img('./img/qingbao.bmp', x1=150, y1=90, x2=1000, y2=630, sim=0.5)
+            return False if is_ok == -1 else True
+
+        time.sleep(1)
+        x, y = find_zhoulianxiang()
+        if x == -1 and y == -1:
+            logger.info("没找到周莲香,继续递归查找")
+            self.find_npc_zhou()
+            return
+        zhou_rel_x, zhou_rel_y = x, y
+        self.mouse_tool.left_mouse_click(zhou_rel_x, zhou_rel_y)
+        time.sleep(0.2)
+        if not find_qingbao():
+            logger.info("没找到情报,递归查找")
+            self.find_npc_zhou()
+
+    # 点击接取考古任务
+    def get_task(self):
+        self.mouse_tool.left_mouse_click(470, 450)
+        time.sleep(0.2)
+        self.mouse_tool.left_mouse_click(510, 410)
+
+    # 打开任务栏，并且弄到最底下
+    def open_task_set(self):
+        self.open_or_close_task()
+        time.sleep(0.1)
+        self.mouse_tool.left_mouse_keep_press(1000, 385)
+        time.sleep(0.5)
+        self.mouse_tool.left_mouse_realse()
+        self.mouse_tool.left_mouse_click(830, 388)
+
+    # 判断是否是相关类型的任务
+    def is_certain_task(self):
+        is_ok, x, y = self.image_tool.find_img(kaogu_type_map[kaogu_config["type"]], x1=721, y1=429, x2=988, y2=514)
+        return False if is_ok == -1 else True
+
+    # 放弃任务
+    def give_up_task(self):
+        self.mouse_tool.left_mouse_click(860, 625)
+        time.sleep(0.5)
+        self.mouse_tool.left_mouse_click(450, 430)
+        time.sleep(0.5)
+        self.open_or_close_task()
+
+    # 使用土地符后需要自动跑到考古坐标
+    def location(self):
+        # 定位
+        self.mouse_tool.left_mouse_click(860, 440)
+        time.sleep(0.3)
+        self.mouse_tool.left_mouse_click(463, 428)
+        time.sleep(0.3)
+        self.open_or_close_task()
+
+    # 找到宝藏
+    def find_baozang(self):
+        is_ok, x, y = self.image_tool.find_img('./img/getbaozang.bmp', x1=230, y1=300, x2=700, y2=490, sim=0.6)
+        return False if is_ok == -1 else True
+
+    # 是否被挡住
+    def is_block(self):
+        is_ok, x, y = self.image_tool.find_img('./img/block.bmp', x1=250, y1=10, x2=850, y2=200, sim=0.6)
+        return False if is_ok == -1 else True
+
+    # 是否在加载中
+    def is_loading(self):
+        is_ok, x, y = self.image_tool.find_img('./img/pkg.bmp', x1=780, y1=720, x2=1010, y2=770, sim=0.6)
+        return True if is_ok == -1 else False
